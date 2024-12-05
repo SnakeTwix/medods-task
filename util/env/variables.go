@@ -1,0 +1,8 @@
+package env
+
+const (
+	POSTGRES_DB       = "POSTGRES_DB"
+	POSTGRES_USER     = "POSTGRES_USER"
+	POSTGRES_PASSWORD = "POSTGRES_PASSWORD"
+	API_PORT          = "API_PORT"
+)
