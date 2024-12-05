@@ -5,8 +5,8 @@ import (
 	"os"
 )
 
-func Get(envName string) string {
-	envValue, ok := os.LookupEnv(envName)
+func Get(envName Type) string {
+	envValue, ok := os.LookupEnv(string(envName))
 	if !ok {
 		log.Fatalf("%s is not set \n", envName)
 	}

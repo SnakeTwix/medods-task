@@ -2,7 +2,11 @@ module medods-api
 
 go 1.23.4
 
-require github.com/labstack/echo/v4 v4.13.0
+require (
+	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/google/uuid v1.6.0
+	github.com/labstack/echo/v4 v4.13.0
+)
 
 require (
 	github.com/labstack/gommon v0.4.2 // indirect
