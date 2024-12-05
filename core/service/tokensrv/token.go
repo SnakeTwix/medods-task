@@ -45,6 +45,7 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string)
 		return nil, err
 	}
 
+	// Check if the token we got was the one we expected and not a previous one
 	isTokenSupposedToBeUsed, err := s.tokenRepo.CheckCorrectRefreshToken(context, refreshToken, refreshTkn.TokenFamily.String())
 	if !isTokenSupposedToBeUsed {
 		err = s.tokenRepo.RevokeTokenFamily(context, refreshToken)
@@ -60,19 +61,31 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string)
 		return nil, err
 	}
 
-	return s.GetToken(context, userId)
+	token, _, refreshTkn, err := s.newToken(userId, refreshTkn)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenData := port.TokenData{
+		RefreshToken: token.Refresh,
+		TokenFamily:  refreshTkn.TokenFamily.String(),
+		UserId:       userId,
+	}
+
+	// Update the token
+	err = s.tokenRepo.WriteRefreshToken(context, &tokenData)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }
 
-func (s *TokenService) newToken(userId uuid.UUID, refreshTokenEncoded *string) (*domain.Token, *accessToken, *refreshToken, error) {
+func (s *TokenService) newToken(userId uuid.UUID, oldRefreshToken *refreshToken) (*domain.Token, *accessToken, *refreshToken, error) {
 	refreshTkn := newRefreshToken()
 
 	// Assign the family, if coming with an existing refreshToken
-	if refreshTokenEncoded != nil {
-		oldRefreshToken, err := parseRefreshToken(*refreshTokenEncoded, s.configService.GetRefreshTokenSignKey())
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
+	if oldRefreshToken != nil {
 		refreshTkn.TokenFamily = oldRefreshToken.TokenFamily
 	}
 
