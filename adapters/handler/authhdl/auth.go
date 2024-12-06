@@ -35,7 +35,7 @@ func (h *AuthHandler) GetTokens(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "userId is not a guid")
 	}
 
-	token, err := h.tokenService.GetToken(c.Request().Context(), userId)
+	token, err := h.tokenService.GetToken(c.Request().Context(), userId, c.RealIP())
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}

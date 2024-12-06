@@ -19,5 +19,4 @@ FROM base AS prod
 COPY . .
 RUN go build -v -o ./bin/app .
 
-EXPOSE 1323
 CMD ["./bin/app"]

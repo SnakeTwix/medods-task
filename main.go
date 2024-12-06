@@ -9,6 +9,7 @@ import (
 	"medods-api/adapters/repository/migration"
 	"medods-api/adapters/repository/tokenrepo"
 	"medods-api/core/service/configsrv"
+	"medods-api/core/service/notifiersrv"
 	"medods-api/core/service/tokensrv"
 	"medods-api/util/env"
 )
@@ -25,7 +26,8 @@ func main() {
 
 	// Service initialization
 	configService := configsrv.New()
-	tokenService := tokensrv.New(configService, tokenRepo)
+	notifierService := notifiersrv.New()
+	tokenService := tokensrv.New(configService, tokenRepo, notifierService)
 
 	// Handle initialization
 	authHandler := authhdl.New(tokenService)
