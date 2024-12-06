@@ -37,7 +37,7 @@ func (h *AuthHandler) GetTokens(c echo.Context) error {
 
 	token, err := h.tokenService.GetToken(c.Request().Context(), userId)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "something went wrong")
+		return c.String(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, token)
@@ -56,9 +56,9 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "bad request")
 	}
 
-	token, err := h.tokenService.RotateToken(c.Request().Context(), requestData.RefreshToken, requestData.AccessToken)
+	token, err := h.tokenService.RotateToken(c.Request().Context(), requestData.RefreshToken, requestData.AccessToken, c.RealIP())
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "something went wrong")
+		return c.String(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, token)

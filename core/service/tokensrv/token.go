@@ -4,32 +4,36 @@ import (
 	"context"
 	"errors"
 	"github.com/google/uuid"
+	"log"
 	"medods-api/core/domain"
 	"medods-api/core/port"
 )
 
 type TokenService struct {
-	configService port.ConfigService
-	tokenRepo     port.TokenRepository
+	configService   port.ConfigService
+	notifierService port.NotifierService
+
+	tokenRepo port.TokenRepository
 }
 
-func New(configService port.ConfigService, tokenRepo port.TokenRepository) *TokenService {
+func New(configService port.ConfigService, tokenRepo port.TokenRepository, notifierService port.NotifierService) *TokenService {
 	return &TokenService{
-		tokenRepo:     tokenRepo,
-		configService: configService,
+		configService:   configService,
+		notifierService: notifierService,
+
+		tokenRepo: tokenRepo,
 	}
 }
 
-func (s *TokenService) GetToken(context context.Context, userId uuid.UUID) (*domain.Token, error) {
-	token, _, refreshTkn, err := s.newToken(userId, nil)
+func (s *TokenService) GetToken(context context.Context, userId uuid.UUID, ip string) (*domain.Token, error) {
+	token, _, refreshTkn, err := s.newToken(userId, ip, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	tokenData := port.TokenData{
-		RefreshToken: token.Refresh,
-		TokenFamily:  refreshTkn.TokenFamily.String(),
-		UserId:       userId,
+		RefreshTokenId: refreshTkn.ID,
+		TokenFamily:    refreshTkn.TokenFamily.String(),
 	}
 	err = s.tokenRepo.WriteRefreshToken(context, &tokenData)
 	if err != nil {
@@ -39,7 +43,7 @@ func (s *TokenService) GetToken(context context.Context, userId uuid.UUID) (*dom
 	return token, nil
 }
 
-func (s *TokenService) RotateToken(context context.Context, refreshToken string, accessToken string) (*domain.Token, error) {
+func (s *TokenService) RotateToken(context context.Context, refreshToken string, accessToken string, ip string) (*domain.Token, error) {
 	refreshTkn, err := parseRefreshToken(refreshToken, s.configService.GetRefreshTokenSignKey())
 	if err != nil {
 		return nil, err
@@ -50,14 +54,26 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string,
 		return nil, err
 	}
 
-	if accessTkn.linkerId != refreshTkn.linkerId {
+	if accessTkn.LinkerId != refreshTkn.LinkerId {
 		return nil, errors.New("access and refresh token pair do not match")
 	}
 
+	// If the ip changed, notify the user
+	if accessTkn.UserIp != ip {
+		err := s.notifierService.NotifyUserIPChange(context, accessTkn.UserGUID, ip)
+		if err != nil {
+			log.Println("failed to notify: ", err)
+		}
+	}
+
 	// Check if the token we got was the one we expected and not a previous one
-	isTokenSupposedToBeUsed, err := s.tokenRepo.CheckCorrectRefreshToken(context, refreshToken, refreshTkn.TokenFamily.String())
+	isTokenSupposedToBeUsed, err := s.tokenRepo.CheckCorrectGenerationRefreshToken(context, refreshTkn.ID, refreshTkn.TokenFamily.String())
+	if err != nil {
+		return nil, err
+	}
+
 	if !isTokenSupposedToBeUsed {
-		err = s.tokenRepo.RevokeTokenFamily(context, refreshToken)
+		err = s.tokenRepo.RevokeTokenFamily(context, refreshTkn.TokenFamily.String())
 		if err != nil {
 			return nil, err
 		}
@@ -65,15 +81,14 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string,
 		return nil, errors.New("previous token usage detected")
 	}
 
-	token, _, refreshTkn, err := s.newToken(accessTkn.UserGUID, refreshTkn)
+	token, _, refreshTkn, err := s.newToken(accessTkn.UserGUID, ip, refreshTkn)
 	if err != nil {
 		return nil, err
 	}
 
 	tokenData := port.TokenData{
-		RefreshToken: token.Refresh,
-		TokenFamily:  refreshTkn.TokenFamily.String(),
-		UserId:       accessTkn.UserGUID,
+		RefreshTokenId: refreshTkn.ID,
+		TokenFamily:    refreshTkn.TokenFamily.String(),
 	}
 
 	// Update the token
@@ -85,7 +100,7 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string,
 	return token, nil
 }
 
-func (s *TokenService) newToken(userId uuid.UUID, oldRefreshToken *refreshToken) (*domain.Token, *accessToken, *refreshToken, error) {
+func (s *TokenService) newToken(userId uuid.UUID, userIP string, oldRefreshToken *refreshToken) (*domain.Token, *accessToken, *refreshToken, error) {
 	linkerId := uuid.New()
 	refreshTkn := newRefreshToken(linkerId)
 
@@ -99,7 +114,7 @@ func (s *TokenService) newToken(userId uuid.UUID, oldRefreshToken *refreshToken)
 		return nil, nil, nil, err
 	}
 
-	accessTkn := newAccessToken(userId, linkerId)
+	accessTkn := newAccessToken(userId, userIP, linkerId)
 	accessSigned, err := accessTkn.Sign(s.configService.GetAccessTokenSignKey())
 	if err != nil {
 		return nil, nil, nil, err

@@ -8,9 +8,9 @@ import (
 )
 
 type refreshToken struct {
-	TokenFamily uuid.UUID
+	TokenFamily uuid.UUID `json:"tokenFamily"`
 	// The id to link the access and refresh tokens together
-	linkerId uuid.UUID
+	LinkerId uuid.UUID `json:"linkerId"`
 	jwt.RegisteredClaims
 }
 
@@ -25,7 +25,7 @@ func (t *refreshToken) Sign(key []byte) (string, error) {
 }
 
 func parseRefreshToken(tokenEncoded string, key []byte) (*refreshToken, error) {
-	token, err := jwt.ParseWithClaims(tokenEncoded, refreshToken{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenEncoded, &refreshToken{}, func(token *jwt.Token) (interface{}, error) {
 		return key, nil
 	})
 
@@ -44,11 +44,12 @@ func parseRefreshToken(tokenEncoded string, key []byte) (*refreshToken, error) {
 func newRefreshToken(linkerId uuid.UUID) *refreshToken {
 	token := refreshToken{
 		TokenFamily: uuid.New(),
-		linkerId:    linkerId,
+		LinkerId:    linkerId,
 		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 			// Expires after a month, arbitrary
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 30)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ID:        uuid.New().String(),
 		},
 	}
 

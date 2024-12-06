@@ -8,9 +8,10 @@ import (
 )
 
 type accessToken struct {
-	UserGUID uuid.UUID
+	UserGUID uuid.UUID `json:"userId"`
 	// The id to link the access and refresh tokens together
-	linkerId uuid.UUID
+	LinkerId uuid.UUID `json:"linkerId"`
+	UserIp   string    `json:"userIp"`
 	jwt.RegisteredClaims
 }
 
@@ -26,7 +27,7 @@ func (t *accessToken) Sign(key []byte) (string, error) {
 }
 
 func parseAccessToken(tokenEncoded string, key []byte) (*accessToken, error) {
-	token, err := jwt.ParseWithClaims(tokenEncoded, accessToken{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenEncoded, &accessToken{}, func(token *jwt.Token) (interface{}, error) {
 		return key, nil
 	})
 
@@ -42,10 +43,11 @@ func parseAccessToken(tokenEncoded string, key []byte) (*accessToken, error) {
 	return nil, errors.New("not an access token")
 }
 
-func newAccessToken(userId uuid.UUID, linkerId uuid.UUID) *accessToken {
+func newAccessToken(userId uuid.UUID, userIp string, linkerId uuid.UUID) *accessToken {
 	token := accessToken{
 		UserGUID: userId,
-		linkerId: linkerId,
+		UserIp:   userIp,
+		LinkerId: linkerId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
