@@ -9,6 +9,8 @@ import (
 
 type accessToken struct {
 	UserGUID uuid.UUID
+	// The id to link the access and refresh tokens together
+	linkerId uuid.UUID
 	jwt.RegisteredClaims
 }
 
@@ -40,9 +42,10 @@ func parseAccessToken(tokenEncoded string, key []byte) (*accessToken, error) {
 	return nil, errors.New("not an access token")
 }
 
-func newAccessToken(userId uuid.UUID) *accessToken {
+func newAccessToken(userId uuid.UUID, linkerId uuid.UUID) *accessToken {
 	token := accessToken{
 		UserGUID: userId,
+		linkerId: linkerId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),

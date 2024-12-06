@@ -39,10 +39,19 @@ func (s *TokenService) GetToken(context context.Context, userId uuid.UUID) (*dom
 	return token, nil
 }
 
-func (s *TokenService) RotateToken(context context.Context, refreshToken string) (*domain.Token, error) {
+func (s *TokenService) RotateToken(context context.Context, refreshToken string, accessToken string) (*domain.Token, error) {
 	refreshTkn, err := parseRefreshToken(refreshToken, s.configService.GetRefreshTokenSignKey())
 	if err != nil {
 		return nil, err
+	}
+
+	accessTkn, err := parseAccessToken(accessToken, s.configService.GetAccessTokenSignKey())
+	if err != nil {
+		return nil, err
+	}
+
+	if accessTkn.linkerId != refreshTkn.linkerId {
+		return nil, errors.New("access and refresh token pair do not match")
 	}
 
 	// Check if the token we got was the one we expected and not a previous one
@@ -56,12 +65,7 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string)
 		return nil, errors.New("previous token usage detected")
 	}
 
-	userId, err := s.tokenRepo.GetUserByRefreshToken(context, refreshToken)
-	if err != nil {
-		return nil, err
-	}
-
-	token, _, refreshTkn, err := s.newToken(userId, refreshTkn)
+	token, _, refreshTkn, err := s.newToken(accessTkn.UserGUID, refreshTkn)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +73,7 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string)
 	tokenData := port.TokenData{
 		RefreshToken: token.Refresh,
 		TokenFamily:  refreshTkn.TokenFamily.String(),
-		UserId:       userId,
+		UserId:       accessTkn.UserGUID,
 	}
 
 	// Update the token
@@ -82,7 +86,8 @@ func (s *TokenService) RotateToken(context context.Context, refreshToken string)
 }
 
 func (s *TokenService) newToken(userId uuid.UUID, oldRefreshToken *refreshToken) (*domain.Token, *accessToken, *refreshToken, error) {
-	refreshTkn := newRefreshToken()
+	linkerId := uuid.New()
+	refreshTkn := newRefreshToken(linkerId)
 
 	// Assign the family, if coming with an existing refreshToken
 	if oldRefreshToken != nil {
@@ -94,7 +99,7 @@ func (s *TokenService) newToken(userId uuid.UUID, oldRefreshToken *refreshToken)
 		return nil, nil, nil, err
 	}
 
-	accessTkn := newAccessToken(userId)
+	accessTkn := newAccessToken(userId, linkerId)
 	accessSigned, err := accessTkn.Sign(s.configService.GetAccessTokenSignKey())
 	if err != nil {
 		return nil, nil, nil, err

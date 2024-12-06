@@ -8,7 +8,7 @@ import (
 
 type TokenService interface {
 	GetToken(context context.Context, userId uuid.UUID) (*domain.Token, error)
-	RotateToken(context context.Context, refreshToken string) (*domain.Token, error)
+	RotateToken(context context.Context, refreshToken string, accessToken string) (*domain.Token, error)
 }
 
 type TokenData struct {
@@ -21,5 +21,4 @@ type TokenRepository interface {
 	WriteRefreshToken(context context.Context, tokenData *TokenData) error
 	CheckCorrectRefreshToken(context context.Context, refreshToken string, tokenFamily string) (bool, error)
 	RevokeTokenFamily(context context.Context, tokenFamily string) error
-	GetUserByRefreshToken(context context.Context, refreshToken string) (uuid.UUID, error)
 }

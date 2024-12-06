@@ -24,7 +24,8 @@ type getTokensRequest struct {
 func (h *AuthHandler) GetTokens(c echo.Context) error {
 	var requestData getTokensRequest
 
-	err := c.Bind(&requestData)
+	// Default echo.Context.Bind() doesn't check for query strings in POST requests
+	err := (&echo.DefaultBinder{}).BindQueryParams(c, &requestData)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "bad request")
 	}
@@ -44,17 +45,18 @@ func (h *AuthHandler) GetTokens(c echo.Context) error {
 
 type refreshTokenRequest struct {
 	RefreshToken string `query:"refreshToken"`
+	AccessToken  string `query:"accessToken"`
 }
 
 func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	var requestData refreshTokenRequest
 
-	err := c.Bind(&requestData)
+	err := (&echo.DefaultBinder{}).BindQueryParams(c, &requestData)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "bad request")
 	}
 
-	token, err := h.tokenService.RotateToken(c.Request().Context(), requestData.RefreshToken)
+	token, err := h.tokenService.RotateToken(c.Request().Context(), requestData.RefreshToken, requestData.AccessToken)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "something went wrong")
 	}

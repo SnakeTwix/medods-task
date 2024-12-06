@@ -17,7 +17,8 @@ services:
     env_file:
       - .env
     # https://github.com/air-verse/air?tab=readme-ov-file#docker-compose
-    image: cosmtrek/air
+    build:
+      target: dev
     working_dir: /app
     ports:
       - "${API_PORT}:${API_PORT}"

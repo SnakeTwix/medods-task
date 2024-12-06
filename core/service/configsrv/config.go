@@ -9,6 +9,8 @@ type ConfigService struct {
 }
 
 func New() *ConfigService {
+	// In this case, we should initialize the config right away from the env variables
+	// Don't want the application randomly crashing because an env variable was not defined
 	return &ConfigService{
 		accessTokenSignKey:  []byte(env.Get(env.ACCESS_TOKEN_SIGN_KEY)),
 		refreshTokenSignKey: []byte(env.Get(env.REFRESH_TOKEN_SIGN_KEY)),
