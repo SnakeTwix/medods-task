@@ -41,7 +41,7 @@ Query:
 
 Response body:
 {
-    "refresh": "jwt_token",
+    "refresh": "base64 jwt_token",
     "access": "jwt_token"
 }
 
@@ -50,12 +50,12 @@ Response body:
 ```
 PATH: POST /auth/refresh
 Query:
-- refreshToken: jwtToken
-- accessToken: jwtToken
+- refreshToken: "base64 jwtToken"
+- accessToken: "jwtToken"
 
 Response body:
 {
-    "refresh": "jwt_token",
+    "refresh": "base64 jwt_token",
     "access": "jwt_token"
 }
 ```

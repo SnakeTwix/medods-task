@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"medods-api/core/port"
+	"medods-api/util/base64"
 	"net/http"
 )
 
@@ -40,6 +41,8 @@ func (h *AuthHandler) GetTokens(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 
+	// Передаем в base64
+	token.Refresh = base64.Encode(token.Refresh)
 	return c.JSON(http.StatusOK, token)
 }
 
@@ -56,10 +59,16 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "bad request")
 	}
 
+	requestData.RefreshToken, err = base64.Decode(requestData.RefreshToken)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "couldn't decode refresh token")
+	}
+
 	token, err := h.tokenService.RotateToken(c.Request().Context(), requestData.RefreshToken, requestData.AccessToken, c.RealIP())
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 
+	token.Refresh = base64.Encode(token.Refresh)
 	return c.JSON(http.StatusOK, token)
 }
