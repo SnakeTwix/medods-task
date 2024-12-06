@@ -4,17 +4,16 @@ services:
     env_file:
       - .env
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres-prod:/var/lib/postgresql/data
     # https://github.com/peter-evans/docker-compose-healthcheck?tab=readme-ov-file#waiting-for-postgresql-to-be-healthy
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}"]
       interval: 3s
       timeout: 10s
       retries: 5
-  api:
+  api-prod:
     env_file:
       - .env
-    # https://github.com/air-verse/air?tab=readme-ov-file#docker-compose
     build:
       target: prod
     working_dir: /app
@@ -29,4 +28,4 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres:
+  postgres-prod:
