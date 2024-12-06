@@ -35,7 +35,7 @@ docker compose -f compose.prod.yml up
 ### API Routes
 
 ```
-PATH: /auth/login
+PATH: POST /auth/login
 Query:
 - userId: uuid
 
@@ -48,7 +48,7 @@ Response body:
 ```
 
 ```
-PATH: /auth/refresh
+PATH: POST /auth/refresh
 Query:
 - refreshToken: jwtToken
 - accessToken: jwtToken
